@@ -2,15 +2,9 @@
 
 The aim of this project is to build a comprehensive knowledge graph of clinical pharmacology information, in particular with regards to the health products, guidelines and regulations specific to France. This could enable the development of agentic tools and workflows that enhance patient care.
 
-### GitHub LFS
+## GitHub LFS
 
-**IMPORTANT : to download this database, make sure to have git-lfs installed on your system**
-
-```
-# macOS
-brew install git-lfs
-git lfs install
-```
+**IMPORTANT : to clone this repo, make sure to have git-lfs installed on your system**
 
 ```
 # Debian / Ubuntu
@@ -18,21 +12,9 @@ sudo apt install git-lfs
 git lfs install
 ```
 
-```
-# Fedora
-sudo dnf install git-lfs
-git lfs install
-```
-
-```
-# Windows
-choco install git-lfs   # or install via Git for Windows
-git lfs install
-```
-
 You can then `git clone` the repo as usual. If downloaded without lfs installed, you can fix it by running `git lfs pull`.
 
-### Database Structure
+## Database Structure
 
 The CSV folder contains the actual database, which is written in a format designed for Apache AGE. 
 
@@ -40,7 +22,17 @@ The CSV folder contains the actual database, which is written in a format design
 - Node files contain unique IDs as well as a list of properties for each node
 - Edge files contain the IDs and types for starting and end nodes, as well as edge properties.
 
-### Loading the database
+## Loading the database
+
+### Using Docker
+
+With docker installed on your system, you may run the database simply building this image from the dockerfile : 
+
+`docker build -t yourname/frenchpharmakg`
+
+`docker run -d --name frenchpharmakg -p 5432:5432 yourname/frenchpharmakg`
+
+### Manual installation
 
 The `csv-loader.py` file contains code that loads the files into an Apache AGE graph. The extension must be installed inside of Postgresql 16, by following [these instructions](https://age.apache.org/getstarted/quickstart). You then create a database named `fpkg0_1` : 
 
