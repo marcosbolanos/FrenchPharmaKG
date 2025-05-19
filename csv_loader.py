@@ -5,8 +5,8 @@ from psycopg2.extras import execute_batch
 
 conn = psycopg2.connect(
     dbname="fpkg0_1",
-    user=os.environ.get("PGUSER"),
-    password=os.environ.get("PGPASSWORD"),
+    user='postgres',
+    password='postgres',
     host="localhost",
     port="5432"
 )

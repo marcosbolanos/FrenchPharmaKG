@@ -6,8 +6,7 @@ The aim of this project is to build a comprehensive knowledge graph of clinical 
 
 **IMPORTANT : to clone this repo, make sure to have git-lfs installed on your system**
 
-```
-# Debian / Ubuntu
+```# Debian / Ubuntu
 sudo apt install git-lfs
 git lfs install
 ```
@@ -28,11 +27,18 @@ The CSV folder contains the actual database, which is written in a format design
 
 With docker installed on your system, you may run the database simply building this image from the dockerfile : 
 
-`docker build -t frenchpharmakg .` 
+```
+# Build the image from the Dockerfile
+docker build -t frenchpharmakg .
 
-`docker run -d --name frenchpharmakg -p 5432:5432 frenchpharmakg`
+# You can replace the leftmost 5432 by the port you wish to connect from
+docker run -d --name frenchpharmakg -p 5432:5432 frenchpharmakg`
 
-`docker exec -it frenchpharmakg python3 csv_loader.py`
+# Load the knowledge from the .csv files
+docker exec -it frenchpharmakg python3 csv_loader.py
+```
+
+
 
 ### Manual installation
 
@@ -42,23 +48,19 @@ The `csv-loader.py` file contains code that loads the files into an Apache AGE g
 
 `CREATE DATABASE fpkg0_1`
 
-
 The extension has to be loaded once inside the database :
 
 `psql fpkg0_1`
 
 `CREATE EXTENSION age`
 
-
 Afterwards, the database is ready to be used. You may set your Postgres login credentials in the code, or as environment variables PGUSER and PGPASSWORD.
-
 
 Optionally, create a viritual environment :
 
 `python -m venv .venv`
 
 `source .venv/bin/activate`
-
 
 Install the requirements, load the cs_loader and enjoy !
 
