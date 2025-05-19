@@ -13,6 +13,8 @@ git lfs install
 
 You can then `git clone` the repo as usual. If you cloned the file without LFS installed, you can fix it by running `git lfs pull`.
 
+An image of this database is available on [Dockerhub](https://hub.docker.com/r/marcosbolanos/frenchpharmakg), but you can also build your own from this repo.
+
 ## Database Structure
 
 The CSV folder contains the actual database, which is written in a format designed for Apache AGE. 
@@ -21,7 +23,7 @@ The CSV folder contains the actual database, which is written in a format design
 - Node files contain unique IDs as well as a list of properties for each node
 - Edge files contain the IDs and types for starting and end nodes, as well as edge properties.
 
-## Loading the database
+## Building the database
 
 ### Using Docker
 
