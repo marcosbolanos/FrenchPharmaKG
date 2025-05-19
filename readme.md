@@ -1,4 +1,4 @@
-# FrenchPharmaKG O.1
+# FrenchPharmaKG 0.1
 
 The aim of this project is to build a comprehensive knowledge graph of clinical pharmacology information, in particular with regards to the health products, guidelines and regulations specific to France. This could enable the development of agentic tools and workflows that enhance patient care.
 
@@ -12,7 +12,7 @@ sudo apt install git-lfs
 git lfs install
 ```
 
-You can then `git clone` the repo as usual. If downloaded without lfs installed, you can fix it by running `git lfs pull`.
+You can then `git clone` the repo as usual. If you cloned the file without LFS installed, you can fix it by running `git lfs pull`.
 
 ## Database Structure
 
@@ -28,9 +28,11 @@ The CSV folder contains the actual database, which is written in a format design
 
 With docker installed on your system, you may run the database simply building this image from the dockerfile : 
 
-`docker build -t yourname/frenchpharmakg`
+`docker build -t frenchpharmakg .` 
 
-`docker run -d --name frenchpharmakg -p 5432:5432 yourname/frenchpharmakg`
+`docker run -d --name frenchpharmakg -p 5432:5432 frenchpharmakg`
+
+`docker exec -it frenchpharmakg python3 csv_loader.py`
 
 ### Manual installation
 
