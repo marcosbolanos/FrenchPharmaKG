@@ -2,6 +2,8 @@
 
 The aim of this project is to build a comprehensive knowledge graph of clinical pharmacology information, in particular with regards to the health products, guidelines and regulations specific to France. This could enable the development of agentic tools and workflows that enhance patient care.
 
+An image of this database is available on [Dockerhub](https://hub.docker.com/r/marcosbolanos/frenchpharmakg), but you can also build your own from this repo.
+
 ## GitHub LFS
 
 **IMPORTANT : to clone this repo, make sure to have git-lfs installed on your system**
@@ -12,8 +14,6 @@ git lfs install
 ```
 
 You can then `git clone` the repo as usual. If you cloned the file without LFS installed, you can fix it by running `git lfs pull`.
-
-An image of this database is available on [Dockerhub](https://hub.docker.com/r/marcosbolanos/frenchpharmakg), but you can also build your own from this repo.
 
 ## Database Structure
 
