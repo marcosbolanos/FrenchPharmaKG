@@ -36,7 +36,7 @@ docker build -t frenchpharmakg .
 # You can replace the leftmost 5432 by the port you wish to connect from
 docker run -d --name frenchpharmakg -p 5432:5432 frenchpharmakg`
 
-# Load the knowledge from the .csv files
+# Load the knowledge graph from the .csv files
 docker exec -it frenchpharmakg python3 csv_loader.py
 ```
 
