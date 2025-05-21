@@ -29,9 +29,10 @@ ENV POSTGRES_DB=fpkg0_1
 # Copy initialization SQL (runs automatically at runtime)
 COPY init.sql /docker-entrypoint-initdb.d/
 
-# Copy the csv loader file and requirements
+# Copy the csv loader file and requirements + the data
 COPY csv_loader.py /csv_loader.py
 COPY requirements.txt /requirements.txt
+COPY ./csv /csv
 
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 

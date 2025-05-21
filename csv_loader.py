@@ -76,7 +76,7 @@ def register_labels():
 
 # Loading all nodes from the CSV files
 def load_nodes_from_csv():
-    csv_dir = '/var/lib/postgresql/csv/nodes'
+    csv_dir = '/csv/nodes'
     
     # Check if the csv directory exists
     if not os.path.exists(csv_dir):
@@ -108,7 +108,7 @@ def load_nodes_from_csv():
                 print(f"Error loading {filename}: {str(e)}")
 
 def load_edges_from_csv():
-    csv_dir = '/var/lib/postgresql/csv/edges'
+    csv_dir = '/csv/edges'
     
     # Check if the csv directory exists
     if not os.path.exists(csv_dir):

@@ -8,7 +8,7 @@ An image of this database is available on [Dockerhub](https://hub.docker.com/r/m
 
 **IMPORTANT : to clone this repo, make sure to have git-lfs installed on your system**
 
-```# Debian / Ubuntu
+```#
 sudo apt install git-lfs
 git lfs install
 ```
@@ -30,17 +30,28 @@ The CSV folder contains the actual database, which is written in a format design
 With docker installed on your system, you may run the database simply building this image from the dockerfile : 
 
 ```
+# If you're on Linux, this will let you access the persistent folder
+PORT=5432
+MOUNT_PATH=/var/lib/frenchpharmakg-data
+USR=$(whoami)
+mkdir -p "$MOUNT_PATH"
+sudo chown -R "$USR":"$USR" "$MOUNT_PATH"
+sudo chmod -R u+rwX "$MOUNT_PATH"
+
 # Build the image from the Dockerfile
 docker build -t frenchpharmakg .
 
-# You can replace the leftmost 5432 by the port you wish to connect from
-docker run -d --name frenchpharmakg -p 5432:5432 frenchpharmakg`
+# Run container with networking and persistence
+# Replace 5432 and "$MOUNT_PATH" by the port and the path you want
+docker run \
+  --name frenchpharmakg -d \
+  -p "$PORT":5432 \
+  -v "$MOUNT_PATH":/var/lib/postgresql/data:z \
+  frenchpharmakg
 
 # Load the knowledge graph from the .csv files
 docker exec -it frenchpharmakg python3 csv_loader.py
 ```
-
-
 
 ### Manual installation
 
