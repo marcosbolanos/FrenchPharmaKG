@@ -6,10 +6,10 @@ from pgvector.psycopg2 import register_vector
 
 conn = psycopg2.connect(
     dbname="fpkg",
-    user='postgres',
-    password='postgres',
+    user=os.environ.get("PGUSER"),
+    password=os.environ.get("PGPASSWORD"),
     host="localhost",
-    port="5432"
+    port="5431"
 )
 
 cursor = conn.cursor()
@@ -77,7 +77,7 @@ def register_labels():
 
 # Loading all nodes from the CSV files
 def load_nodes_from_csv():
-    csv_dir = '/csv/nodes'
+    csv_dir = '/tmp/csv/nodes'
     
     # Check if the csv directory exists
     if not os.path.exists(csv_dir):
@@ -109,7 +109,7 @@ def load_nodes_from_csv():
                 print(f"Error loading {filename}: {str(e)}")
 
 def load_edges_from_csv():
-    csv_dir = '/csv/edges'
+    csv_dir = '/tmp/csv/edges'
     
     # Check if the csv directory exists
     if not os.path.exists(csv_dir):
@@ -145,7 +145,7 @@ def verify_graph():
     # Count vertices by label
     cursor.execute("""
     SELECT label_id, count(*) 
-    FROM ag_catalog.ag_vertex 
+    FROM ag_catalog.ag_label 
     WHERE graph_id = (SELECT id FROM ag_catalog.ag_graph WHERE name = 'fcsv')
     GROUP BY label_id 
     ORDER BY label_id;
@@ -193,6 +193,10 @@ def verify_graph():
 
 def add_vector_embeddings():
     print("\nAdding vector embeddings...")
+    cursor.execute('CREATE EXTENSION IF NOT EXISTS vector')
+
+    # Commit the transaction so the extension is available
+    conn.commit()
     
     # Register vector extension
     register_vector(conn)
@@ -205,8 +209,7 @@ def add_vector_embeddings():
                 id UUID PRIMARY KEY,
                 node_name TEXT,
                 node_type TEXT,
-                embedding vector(1536),  -- OpenAI text-embedding-3-small dimensionality
-                FOREIGN KEY (id) REFERENCES ag_catalog.ag_vertex(id)
+                embedding vector(1536)  -- OpenAI text-embedding-3-small dimensionality
             );
         """
         cursor.execute(query)
@@ -222,16 +225,46 @@ def add_vector_embeddings():
     # Get all nodes from the graph database
     print("Retrieving nodes from graph database...")
     try:
+        # First, get all vertex label tables for the graph
         cursor.execute("""
-            SELECT v.id, v.properties->>'name' as node_name, l.name as node_type
-            FROM ag_catalog.ag_vertex v
-            JOIN ag_catalog.ag_label l ON v.label_id = l.id
-            WHERE v.graph_id = (SELECT id FROM ag_catalog.ag_graph WHERE name = 'fcsv')
-            AND v.properties->>'name' IS NOT NULL
-            ORDER BY l.name, v.properties->>'name'
+            SELECT name, relation FROM ag_catalog.ag_label 
+            WHERE graph = (SELECT id FROM ag_catalog.ag_graph WHERE name = 'fcsv')
+            AND kind = 'v'
+            AND name != '_ag_label_vertex'
         """)
-        nodes = cursor.fetchall()
-        print(f"Found {len(nodes)} nodes to embed")
+        vertex_labels = cursor.fetchall()
+        
+        if not vertex_labels:
+            print("No vertex labels found in the graph")
+            return
+            
+        print(f"Found {len(vertex_labels)} vertex label types")
+        
+        all_nodes = []
+        
+        # Query each vertex label table
+        for label_name, table_relation in vertex_labels:
+            try:
+                # The table_relation contains the full table path like 'fcsv."Drug"'
+                cursor.execute(f"""
+                    SELECT id::text as node_id, 
+                           properties->>'name' as node_name,
+                           '{label_name}' as node_type
+                    FROM {table_relation}
+                    WHERE properties->>'name' IS NOT NULL
+                    AND properties->>'name' != ''
+                """)
+                label_nodes = cursor.fetchall()
+                all_nodes.extend(label_nodes)
+                print(f"  Found {len(label_nodes)} nodes in {label_name}")
+                
+            except Exception as label_error:
+                print(f"  Error querying {label_name}: {str(label_error)}")
+                continue
+        
+        nodes = all_nodes
+        print(f"Total found {len(nodes)} nodes to embed")
+        
     except Exception as e:
         print(f"Error retrieving nodes: {str(e)}")
         return
@@ -314,6 +347,7 @@ try:
 except Exception as e:
     conn.rollback()
     print(f"Error: {str(e)}")
+    print("Connection was rolled back")
 
 finally:
     # Close the connection

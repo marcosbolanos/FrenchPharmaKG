@@ -16,32 +16,25 @@ RUN apt-get update && \
 RUN git clone https://github.com/apache/age.git /age && \
     cd /age && \
     make && \
-    make install
+    make install 
     
 # Clone and build PGVector
-RUN cd /tmp \
-    git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git \
-    cd pgvector \
-    make \
-    make install \
+RUN cd /tmp && \
+    git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git && \
+    cd pgvector && \
+    make && \
+    make install 
 
 # Enable AGE on container start
 RUN echo "shared_preload_libraries='age'" >> /usr/share/postgresql/postgresql.conf.sample
+# Configure PostgreSQL to load vector extension
+RUN echo "shared_preload_libraries = 'vector'" >> /usr/share/postgresql/postgresql.conf.sample
 
 # Set environment variables
-ENV POSTGRES_USER=postgres
-ENV POSTGRES_PASSWORD=postgres
 ENV POSTGRES_DB=fpkg
 
 # Copy initialization SQL (runs automatically at runtime)
 COPY init.sql /docker-entrypoint-initdb.d/
 
 # Copy the csv loader file and requirements + the data
-COPY csv_loader.py /csv_loader.py
-COPY requirements.txt /requirements.txt
 COPY ./csv /csv
-
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
-
-# Install the Python librairies
-RUN pip install -r requirements.txt  

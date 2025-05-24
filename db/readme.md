@@ -27,7 +27,7 @@ The CSV folder contains the actual database, which is written in a format design
 
 ### Using Docker
 
-Make sure you've set your `$OPENAI_API_KEY` environment variable
+Make sure you've set your `$OPENAI_API_KEY`, `$PGUSER` and `$PGPASSWORD` environment variables.
 
 With docker installed on your system, you may run the database simply building this image from the dockerfile : 
 
@@ -38,23 +38,26 @@ MOUNT_PATH=/var/lib/frenchpharmakg-data
 
 # If you're on Linux, this will let you access the persistent folder
 USR=$(whoami)
-mkdir -p "$MOUNT_PATH"
+sudo rm -rf $MOUNT_PATH
+sudo mkdir -p "$MOUNT_PATH"
 sudo chown -R "$USR":"$USR" "$MOUNT_PATH"
 sudo chmod -R u+rwX "$MOUNT_PATH"
 
 # Build the image from the Dockerfile
-docker build -t frenchpharmakg .
+podman build -t frenchpharmakg .
 
 # Run container with networking and persistence
-docker run \
+podman run --replace \
   --name frenchpharmakg -d \
   -p "$PORT":5432 \
-  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e OPENAI_API_KEY \
+  -e POSTGRES_USER=$PGUSER \
+  -e POSTGRES_PASSWORD=$PGPASSWORD \
   -v "$MOUNT_PATH":/var/lib/postgresql/data:z \
   frenchpharmakg
 
 # Load the knowledge graph from the .csv files
-docker exec -it frenchpharmakg python3 csv_loader.py
+podman exec -it frenchpharmakg python3 csv_loader.py
 ```
 
 ### Manual installation
