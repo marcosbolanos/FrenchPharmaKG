@@ -17,6 +17,13 @@ RUN git clone https://github.com/apache/age.git /age && \
     cd /age && \
     make && \
     make install
+    
+# Clone and build PGVector
+RUN cd /tmp \
+    git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git \
+    cd pgvector \
+    make \
+    make install \
 
 # Enable AGE on container start
 RUN echo "shared_preload_libraries='age'" >> /usr/share/postgresql/postgresql.conf.sample
