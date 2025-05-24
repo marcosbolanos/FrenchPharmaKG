@@ -23,16 +23,20 @@ The CSV folder contains the actual database, which is written in a format design
 - Node files contain unique IDs as well as a list of properties for each node
 - Edge files contain the IDs and types for starting and end nodes, as well as edge properties.
 
-## Building the database
+## Running the database
 
 ### Using Docker
+
+Make sure you've set your `$OPENAI_API_KEY` environment variable
 
 With docker installed on your system, you may run the database simply building this image from the dockerfile : 
 
 ```
-# If you're on Linux, this will let you access the persistent folder
-PORT=5432
+# Replace 5431 and "$MOUNT_PATH" by the port and the path you want
+PORT=5431
 MOUNT_PATH=/var/lib/frenchpharmakg-data
+
+# If you're on Linux, this will let you access the persistent folder
 USR=$(whoami)
 mkdir -p "$MOUNT_PATH"
 sudo chown -R "$USR":"$USR" "$MOUNT_PATH"
@@ -42,10 +46,10 @@ sudo chmod -R u+rwX "$MOUNT_PATH"
 docker build -t frenchpharmakg .
 
 # Run container with networking and persistence
-# Replace 5432 and "$MOUNT_PATH" by the port and the path you want
 docker run \
   --name frenchpharmakg -d \
   -p "$PORT":5432 \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v "$MOUNT_PATH":/var/lib/postgresql/data:z \
   frenchpharmakg
 
