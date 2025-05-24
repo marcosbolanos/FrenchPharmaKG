@@ -49,7 +49,7 @@ docker build -t frenchpharmakg .
 docker run \
   --name frenchpharmakg -d \
   -p "$PORT":5432 \
-  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
   -v "$MOUNT_PATH":/var/lib/postgresql/data:z \
   frenchpharmakg
 
