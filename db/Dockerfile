@@ -31,7 +31,7 @@ RUN echo "shared_preload_libraries='age'" >> /usr/share/postgresql/postgresql.co
 # Set environment variables
 ENV POSTGRES_USER=postgres
 ENV POSTGRES_PASSWORD=postgres
-ENV POSTGRES_DB=fpkg0_1
+ENV POSTGRES_DB=fpkg
 
 # Copy initialization SQL (runs automatically at runtime)
 COPY init.sql /docker-entrypoint-initdb.d/

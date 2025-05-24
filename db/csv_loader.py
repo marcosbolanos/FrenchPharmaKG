@@ -1,10 +1,11 @@
 from json import load
 import psycopg2
+import openai
 import os
-from psycopg2.extras import execute_batch
+from pgvector.psycopg2 import register_vector
 
 conn = psycopg2.connect(
-    dbname="fpkg0_1",
+    dbname="fpkg",
     user='postgres',
     password='postgres',
     host="localhost",
@@ -140,7 +141,7 @@ def load_edges_from_csv():
                 print(f"Error loading {filename}: {str(e)}")
 
 # Verify the loaded data
-def verify_data():
+def verify_graph():
     # Count vertices by label
     cursor.execute("""
     SELECT label_id, count(*) 
@@ -190,6 +191,105 @@ def verify_data():
         label_name = edge_labels.get(label_id, f"Unknown (ID: {label_id})")
         print(f"  - {label_name}: {count}")
 
+def add_vector_embeddings():
+    print("\nAdding vector embeddings...")
+    
+    # Register vector extension
+    register_vector(conn)
+    
+    # Create a new table for vector embeddings
+    print("Creating document_vectors table...")
+    try:
+        query = """
+            CREATE TABLE IF NOT EXISTS document_vectors (
+                id UUID PRIMARY KEY,
+                node_name TEXT,
+                node_type TEXT,
+                embedding vector(1536),  -- OpenAI text-embedding-3-small dimensionality
+                FOREIGN KEY (id) REFERENCES ag_catalog.ag_vertex(id)
+            );
+        """
+        cursor.execute(query)
+        conn.commit()
+        print("Document vectors table created successfully")
+    except Exception as e:
+        print(f"Error creating table: {str(e)}")
+        return
+    
+    # Set up OpenAI client
+    openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    
+    # Get all nodes from the graph database
+    print("Retrieving nodes from graph database...")
+    try:
+        cursor.execute("""
+            SELECT v.id, v.properties->>'name' as node_name, l.name as node_type
+            FROM ag_catalog.ag_vertex v
+            JOIN ag_catalog.ag_label l ON v.label_id = l.id
+            WHERE v.graph_id = (SELECT id FROM ag_catalog.ag_graph WHERE name = 'fcsv')
+            AND v.properties->>'name' IS NOT NULL
+            ORDER BY l.name, v.properties->>'name'
+        """)
+        nodes = cursor.fetchall()
+        print(f"Found {len(nodes)} nodes to embed")
+    except Exception as e:
+        print(f"Error retrieving nodes: {str(e)}")
+        return
+    
+    # Process nodes in batches to avoid overwhelming the API
+    batch_size = 100
+    embedded_count = 0
+    
+    for i in range(0, len(nodes), batch_size):
+        batch = nodes[i:i + batch_size]
+        print(f"Processing batch {i//batch_size + 1}/{(len(nodes) + batch_size - 1)//batch_size}...")
+        
+        for node_id, node_name, node_type in batch:
+            try:
+                # Skip if node_name is empty or None
+                if not node_name or node_name.strip() == '':
+                    continue
+                
+                # Create text to embed (combine name and type for better context)
+                text_to_embed = f"{node_type}: {node_name}"
+                
+                # Generate embedding using OpenAI
+                response = openai_client.embeddings.create(
+                    model="text-embedding-3-small",
+                    input=text_to_embed
+                )
+                
+                embedding = response.data[0].embedding
+                
+                # Insert into document_vectors table
+                cursor.execute("""
+                    INSERT INTO document_vectors (id, node_name, node_type, embedding)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        node_name = EXCLUDED.node_name,
+                        node_type = EXCLUDED.node_type,
+                        embedding = EXCLUDED.embedding
+                """, (node_id, node_name, node_type, embedding))
+                
+                embedded_count += 1
+                
+                if embedded_count % 50 == 0:
+                    print(f"  Embedded {embedded_count}/{len(nodes)} nodes...")
+                    
+            except Exception as e:
+                print(f"Error embedding node {node_id} ({node_name}): {str(e)}")
+                continue
+        
+        # Commit batch
+        try:
+            conn.commit()
+        except Exception as e:
+            print(f"Error committing batch: {str(e)}")
+            conn.rollback()
+    
+    print(f"Successfully embedded {embedded_count} nodes")
+    print("Vector embeddings added successfully!")
+
 # Main execution
 try:
     # First register all labels
@@ -203,14 +303,18 @@ try:
     print("\nLoading edges...")
     load_edges_from_csv()
     
-    # Finally verify the data
-    # verify_data()
+    # Verify the graph
+    # verify_graph()
+
+    # Add vector embeddings to nodes
+    add_vector_embeddings()
     
     print("\nDatabase loading completed successfully!")
-    
+
 except Exception as e:
     conn.rollback()
     print(f"Error: {str(e)}")
+
 finally:
     # Close the connection
     cursor.close()
