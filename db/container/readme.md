@@ -56,8 +56,8 @@ podman run --replace \
   -v "$MOUNT_PATH":/var/lib/postgresql/data:z \
   frenchpharmakg
 
-# Quickly load the knowledge graph from the CSVs
-podman exec frenchpharmakg python3 csv_loader.py
+# Connect to DB from host, load the knowledge graph from the CSVs
+python csv_loader.py
 ```
 
 ### Manual installation

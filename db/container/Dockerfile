@@ -36,5 +36,12 @@ ENV POSTGRES_DB=fpkg
 # Copy initialization SQL (runs automatically at runtime)
 COPY init.sql /docker-entrypoint-initdb.d/
 
-# Copy the csv loader file and requirements + the data
+# Copy every necessary file into the container
+COPY csv_loader.py /
+COPY requirements.txt /
 COPY ./csv /csv
+
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+RUN pip install -r /requirements.txt
+
