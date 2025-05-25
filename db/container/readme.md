@@ -57,7 +57,10 @@ podman run --replace \
   frenchpharmakg
 
 # Connect to DB from host, load the knowledge graph from the CSVs
-python csv_loader.py
+podman exec frenchpharmakg python3 csv_loader.py
+
+# Add node embeddings to the graph
+python node_embedder.py
 ```
 
 ### Manual installation
