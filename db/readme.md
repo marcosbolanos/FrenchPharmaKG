@@ -32,32 +32,27 @@ Make sure you've set your `$OPENAI_API_KEY`, `$PGUSER` and `$PGPASSWORD` environ
 With docker installed on your system, you may run the database simply building this image from the dockerfile : 
 
 ```
-# Replace 5431 and "$MOUNT_PATH" by the port and the path you want
+# Replace 5431 by the port you want
 PORT=5431
-MOUNT_PATH=/var/lib/frenchpharmakg-data
 
-# If you're on Linux, this will let you access the persistent folder
-USR=$(whoami)
-sudo rm -rf $MOUNT_PATH
-sudo mkdir -p "$MOUNT_PATH"
-sudo chown -R "$USR":"$USR" "$MOUNT_PATH"
-sudo chmod -R u+rwX "$MOUNT_PATH"
+# Create a volume for persistent storage
+docker volume create fpkg_volume
 
 # Build the image from the Dockerfile
-podman build -t frenchpharmakg .
+docker build -t frenchpharmakg .
 
 # Run container with networking and persistence
-podman run --replace \
+docker run \
   --name frenchpharmakg -d \
   -p "$PORT":5432 \
   -e OPENAI_API_KEY \
   -e POSTGRES_USER=$PGUSER \
   -e POSTGRES_PASSWORD=$PGPASSWORD \
-  -v "$MOUNT_PATH":/var/lib/postgresql/data:z \
+  -v fpkg_volume:/var/lib/postgresql/data:Z \
   frenchpharmakg
 
 # Quickly load the knowledge graph from the CSVs
-podman exec frenchpharmakg python3 csv_loader.py
+docker exec frenchpharmakg python3 csv_loader.py
 ```
 
 ### Manual installation
