@@ -15,6 +15,9 @@ class DBConfig(TypedDict):
     host:str
     port:str
 
+class NameWithID(TypedDict):
+    name:str
+    id:str
 
 def init_database(
     db_config: DBConfig = None,
@@ -67,7 +70,7 @@ def vsearch_drug(
     cursor: psycopg.Cursor,
     conn: psycopg.Connection,
     embeddings: OpenAIEmbeddings
-) -> dict[str, str] | None:
+) -> NameWithID | None:
     """Search for the exact name and ID of a drug in the database"""
     embedding = embeddings.embed_query(drug)
 
@@ -99,12 +102,66 @@ def vsearch_drug(
         print(e)
         conn.rollback()
         return
+    
+def get_stripped_property_lists_from_query(
+    drug_id: str,
+    query: str,
+    props_and_paths: dict[str, list[str]],
+    cursor: psycopg.Cursor,
+    conn: psycopg.Connection
+) -> list[dict[str, str]] | None:
+    """
+    This is a basic helper function to execute a query with a drug_id, then return a list of results.
+    'query' must be a valid Cypher query as a string, while 'drug_id' must be an existing drug id as str
+
+    The function will return a list of results as plain strings. 
+
+    The props and paths parameter determines which properties of the resulting json will be displayed
+    It's a dictionary mapping desired output parameters to key paths, which are themselves lists of keys
+
+    For instance, if the result of the query is res and 'props_and_paths' = ['name':['properties', 'name'], 'id':['properties', 'id']]
+    The parsed result will be { 'name' :  res['properties']['name'], 'id' : res['properties']['id']] } 
+    And the output will be a list containing all parsed results
+    """
+    try:
+        cursor.execute(query,params={
+            "cypher_params": json.dumps(
+                {
+                    "drug_id": drug_id,
+                }
+            )
+        })
+        results = cursor.fetchall()
+        output = []
+        # Parse all of the cursor's results into the desired output format
+        for res in results:
+            # Strip the text and load as json
+            res = re.sub(r'::\w+$', '', res[0])
+            res = json.loads(res)
+            # Initialize the parsed result as an empty dictionary
+            parsed_res = {}
+            # Each desired property is extracted from the result and added to the dictionary
+            for prop, key_path in props_and_paths.items():
+                res_property = res
+                # Filter the result according to the key path of the property
+                for key in key_path:
+                    res_property = res_property[key]
+                parsed_res[prop] = res_property
+            # The dictionary is added to the list of output dictionaries
+            output.append(parsed_res)
+        return output
+
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return
+
 
 def get_generics(
     drug_id: str,
     cursor: psycopg.Cursor,
     conn: psycopg.Connection
-) -> list[dict[str, str]]:
+) -> list[NameWithID] | None:
     """Find generic drugs using graph search"""
 
     query = f"""
@@ -115,37 +172,28 @@ def get_generics(
     $$, %(cypher_params)s) AS (x agtype);
     """
 
-    try:
-        cursor.execute(query,params={
-            "cypher_params": json.dumps(
-                {
-                    "drug_id": drug_id,
-                }
-            )
-        })
-        results = cursor.fetchall()
-        print(f"Found {len(results)} results:")
-        output = []
-        for res in results:
-            res = re.sub(r'::\w+$', '', res[0])
-            res = json.loads(res)
-            drug_info = {}
-            drug_info["name"] = res["properties"]["name"]
-            drug_info["id"] = res["properties"]["id"]
-            output.append(drug_info)
-            print('name: ', drug_info["name"])
-            print('id: ', drug_info["id"])
-        return output
+    props_and_paths = {
+        "name": ["properties", "name"],
+        "id": ["properties", "id"],
+    }
 
-    except Exception as e:
-        print(e)
-        conn.rollback()
+    result = get_stripped_property_lists_from_query(
+        drug_id = drug_id,
+        query = query,
+        props_and_paths = props_and_paths,
+        cursor = cursor,
+        conn = conn,
+    )
 
+    return result
+
+
+type Excipient = str
 def get_excipients(
     drug_id: str,
     cursor: psycopg.Cursor,
     conn: psycopg.Connection
-):
+) -> list[NameWithID]:
     """Find a drugs' ingredients using graph search"""
 
     query = f"""
@@ -156,26 +204,79 @@ def get_excipients(
     $$, %(cypher_params)s) AS (x agtype);
     """
 
-    try:
-        cursor.execute(query,params={
-            "cypher_params": json.dumps(
-                {
-                    "drug_id": drug_id,
-                }
-            )
-        })
-        results = cursor.fetchall()
-        print(f"Found {len(results)} results:")
-        output = []
-        for res in results:
-            res = re.sub(r'::\w+$', '', res[0])
-            res = json.loads(res)
-            drugname = res["properties"]["name"]
-            output.append(drugname)
-            print(drugname)
-        return output
+    props_and_paths = {
+        "name": ["properties", "name"],
+        "id": ["properties", "id"],
+    }
 
-    except Exception as e:
-        print(e)
-        conn.rollback()
-    return
+    result = get_stripped_property_lists_from_query(
+        drug_id = drug_id,
+        query = query,
+        props_and_paths = props_and_paths,
+        cursor = cursor,
+        conn = conn,
+    )
+
+    return result
+
+def get_indications(
+    drug_id: str,
+    cursor: psycopg.Cursor,
+    conn: psycopg.Connection
+) -> list[NameWithID]:
+    """Find a drug's indications using graph search"""
+
+    query = f"""
+    SELECT * FROM cypher('fcsv', $$ 
+        MATCH(d:Drug)-[r:HasIndication]->(i:Indication)
+        WHERE d.id = $drug_id
+        RETURN i
+    $$, %(cypher_params)s) AS (x agtype);
+    """
+
+    props_and_paths = {
+        "name": ["properties"],
+        "id": ["properties"],
+    }
+
+    result = get_stripped_property_lists_from_query(
+        drug_id = drug_id,
+        query = query,
+        props_and_paths = props_and_paths,
+        cursor = cursor,
+        conn = conn,
+    )
+
+    return result
+
+def get_contraindications(
+    drug_id: str,
+    cursor: psycopg.Cursor,
+    conn: psycopg.Connection
+) -> list[NameWithID]:
+    """Find a drug's contraindications using graph search"""
+
+    query = f"""
+    SELECT * FROM cypher('fcsv', $$ 
+        MATCH(d:Drug)-[r:HasContraindication]->(c:Contraindication)
+        WHERE d.id = $drug_id
+        RETURN c
+    $$, %(cypher_params)s) AS (x agtype);
+    """
+
+    props_and_paths = {
+        "name": ["properties", "type"],
+        "id": ["properties", "id"],
+    }
+
+    result = get_stripped_property_lists_from_query(
+        drug_id = drug_id,
+        query = query,
+        props_and_paths = props_and_paths,
+        cursor = cursor,
+        conn = conn,
+    )
+
+    return result
+
+
